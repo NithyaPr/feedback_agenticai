@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback System</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Feedback System</h1>
+            <button class="settings-btn" id="settingsBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="feedback">Submit Feedback</button>
+            <button class="tab" data-tab="chat">PM Chat</button>
+        </nav>
+
+        <main>
+            <section id="feedback-section" class="tab-content active">
+                <div class="form-container">
+                    <h2>Submit Your Feedback</h2>
+                    <form id="feedbackForm">
+                        <div class="form-group">
+                            <label for="product">Product Name</label>
+                            <input type="text" id="product" name="product" placeholder="Enter product name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="feedbackText">Your Feedback</label>
+                            <textarea id="feedbackText" name="feedbackText" placeholder="Share your experience with the product..." rows="5" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="userId">User ID (Optional)</label>
+                            <input type="text" id="userId" name="userId" placeholder="Enter your user ID">
+                        </div>
+                        <button type="submit" class="btn primary">Submit Feedback</button>
+                    </form>
+                    <div id="feedbackResponse" class="response-box hidden"></div>
+                </div>
+            </section>
+
+            <section id="chat-section" class="tab-content">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <h2>Product Manager Chat</h2>
+                        <div class="product-filter">
+                            <label for="chatProductFilter">Filter by Product:</label>
+                            <input type="text" id="chatProductFilter" placeholder="All products">
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot">
+                            <div class="message-content">
+                                Hello! I'm your product insights assistant. Ask me questions about user feedback, such as:
+                                <ul>
+                                    <li>"What are users struggling with?"</li>
+                                    <li>"What features do users like most?"</li>
+                                    <li>"What are the top complaints for Product X?"</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Ask about user feedback...">
+                        <button id="sendChat" class="btn primary">Send</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="settingsModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Theme Settings</h2>
+                    <button class="close-btn" id="closeSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="theme-mode">
+                        <label>Mode:</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" data-mode="light">Light</button>
+                            <button class="toggle-btn" data-mode="dark">Dark</button>
+                        </div>
+                    </div>
+                    <div class="theme-presets">
+                        <label>Presets:</label>
+                        <div class="preset-grid">
+                            <button class="preset-btn" data-preset="default-light" style="background: #f5f7fa; border: 2px solid #6366f1;">Default Light</button>
+                            <button class="preset-btn" data-preset="default-dark" style="background: #1a1a2e; border: 2px solid #818cf8;">Default Dark</button>
+                            <button class="preset-btn" data-preset="ocean" style="background: linear-gradient(135deg, #1e3a5f, #2d5a87); border: 2px solid #60a5fa;">Ocean Blue</button>
+                            <button class="preset-btn" data-preset="forest" style="background: linear-gradient(135deg, #1a2f1a, #2d4a2d); border: 2px solid #4ade80;">Forest Green</button>
+                        </div>
+                    </div>
+                    <div class="custom-colors">
+                        <label>Custom Colors:</label>
+                        <div class="color-inputs">
+                            <div class="color-input">
+                                <input type="color" id="primaryColor" value="#6366f1">
+                                <span>Primary</span>
+                            </div>
+                            <div class="color-input">
+                                <input type="color" id="bgColor" value="#f5f7fa">
+                                <span>Background</span>
+                            </div>
+                            <div class="color-input">
+                                <input type="color" id="surfaceColor" value="#ffffff">
+                                <span>Surface</span>
+                            </div>
+                            <div class="color-input">
+                                <input type="color" id="textColor" value="#1f2937">
+                                <span>Text</span>
+                            </div>
+                            <div class="color-input">
+                                <input type="color" id="userBubbleColor" value="#6366f1">
+                                <span>User Bubble</span>
+                            </div>
+                            <div class="color-input">
+                                <input type="color" id="botBubbleColor" value="#e5e7eb">
+                                <span>Bot Bubble</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn secondary" id="resetTheme">Reset to Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="static/script.js"></script>
+</body>
+</html>
