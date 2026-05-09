@@ -1,0 +1,94 @@
+{
+  "categories": [
+    "delivery",
+    "billing",
+    "product",
+    "quality",
+    "customer service",
+    "features",
+    "usability",
+    "support"
+  ],
+  "few_shot_examples": [
+  {
+    "feedback": "I tried reaching out because my order never arrived, but the chat agent was unhelpful and kept disconnecting. Total lack of help.",
+    "categories": ["delivery", "support"]
+  },
+  {
+    "feedback": "The app is very intuitive and easy to navigate, but I wish it had a dark mode and a price-tracking alert feature.",
+    "categories": ["usability", "features"]
+  },
+  {
+    "feedback": "I was double-charged for my subscription and when I called customer service, they told me it would take 30 days to fix it. Unacceptable.",
+    "categories": ["billing", "customer service"]
+  },
+  {
+    "feedback": "The headphones sound great, but the plastic casing feels very cheap and flimsy for the price I paid.",
+    "categories": ["product", "quality"]
+  },
+  {
+    "feedback": "The new update made the checkout button almost impossible to find on smaller screens. It’s a mess.",
+    "categories": ["usability"]
+  },
+  {
+    "feedback": "Great selection of items, but the shipping carrier left my package in the rain and the box was soaked through.",
+    "categories": ["product", "delivery"]
+  },
+  {
+    "feedback": "Every time I try to update my credit card info, the system gives me an error. I just want to pay my bill!",
+    "categories": ["billing", "usability"]
+  },
+  {
+    "feedback": "The support team was friendly, but the product itself doesn't have the advanced filtering options I was promised.",
+    "categories": ["support", "features"]
+  },
+  {
+    "feedback": "The material of the shirt is top-notch, very soft and durable. It’s exactly what I was looking for.",
+    "categories": ["quality", "product"]
+  },
+  {
+    "feedback": "I love the app's look, but I've been waiting two weeks for a response from your help desk about my missing promo code.",
+    "categories": ["usability", "customer service"]
+  },
+  {
+    "feedback": "The courier left my package at the wrong house and I had to go find it myself.",
+    "categories": ["delivery"]
+  },
+  {
+    "feedback": "I noticed a $15 'service fee' that wasn't mentioned anywhere during the checkout process.",
+    "categories": ["billing"]
+  },
+  {
+    "feedback": "I've been using this for a month and the stitching on the handle is already coming apart.",
+    "categories": ["quality"]
+  },
+  {
+    "feedback": "The support agent was very polite, but the app itself is so confusing that I couldn't even find where to start a return.",
+    "categories": ["customer service", "usability"]
+  },
+  {
+    "feedback": "I love that you added the 'Buy Now, Pay Later' option, but it didn't apply my discount code correctly at checkout.",
+    "categories": ["features", "billing"]
+  },
+  {
+    "feedback": "The laptop is incredibly fast and powerful, but it arrived in a box that looked like it had been stepped on.",
+    "categories": ["product", "delivery"]
+  },
+  {
+    "feedback": "I tried to use the new AR room-visualizer feature to see if the sofa fits, but the 'Help' documentation doesn't explain how to calibrate it, so I gave up.",
+    "categories": ["features", "support", "usability"]
+  },
+  {
+    "feedback": "The website is beautiful, but the search results are irrelevant and the actual items feel like cheap knock-offs once you hold them.",
+    "categories": ["usability", "product", "quality"]
+  },
+  {
+    "feedback": "Your live chat keeps saying 'Connecting...' forever. I just want to know why I was charged twice for the same order.",
+    "categories": ["support", "billing"]
+  },
+  {
+    "feedback": "The product is perfect, 10/10! But the box was slightly crushed. I don't really care because the item is fine, but just thought you should know.",
+    "categories": ["product", "quality", "delivery"]
+  }
+]
+}

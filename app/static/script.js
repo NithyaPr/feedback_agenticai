@@ -98,21 +98,41 @@ function initTabs() {
     });
 }
 
+function initNpsSlider() {
+    const npsSlider = document.getElementById('npsScore');
+    const npsValueDisplay = document.getElementById('npsValue');
+
+    npsSlider.addEventListener('input', () => {
+        npsValueDisplay.textContent = npsSlider.value;
+    });
+}
+
 function initFeedbackForm() {
     const form = document.getElementById('feedbackForm');
     const responseBox = document.getElementById('feedbackResponse');
+    const responseText = document.getElementById('responseText');
+    const responseCategories = document.getElementById('responseCategories');
+    const categoryTags = document.getElementById('categoryTags');
+    const responseNps = document.getElementById('responseNps');
+    const npsScoreDisplay = document.getElementById('npsScoreDisplay');
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const npsScore = parseInt(document.getElementById('npsScore').value);
+
         const formData = {
             product: document.getElementById('product').value,
             feedback_text: document.getElementById('feedbackText').value,
+            nps_score: npsScore,
             user_id: document.getElementById('userId').value || null
         };
 
         responseBox.classList.remove('hidden', 'success', 'error');
-        responseBox.textContent = 'Submitting feedback...';
+        responseBox.style.display = 'block';
+        responseText.textContent = 'Submitting feedback...';
+        responseCategories.classList.add('hidden');
+        responseNps.classList.add('hidden');
 
         try {
             const response = await fetch('/api/feedback', {
@@ -125,15 +145,28 @@ function initFeedbackForm() {
 
             if (result.success) {
                 responseBox.classList.add('success');
-                responseBox.innerHTML = `<strong>Thank you for your feedback!</strong><br><br>${result.llm_response}`;
+                responseText.innerHTML = `<strong>Thank you for your feedback!</strong><br><br>${result.llm_response}`;
+
+                if (result.categories && result.categories.length > 0) {
+                    categoryTags.innerHTML = result.categories.map(cat =>
+                        `<span class="category-tag">${cat}</span>`
+                    ).join('');
+                    responseCategories.classList.remove('hidden');
+                }
+
+                npsScoreDisplay.textContent = result.nps_score;
+                responseNps.classList.remove('hidden');
+
                 form.reset();
+                document.getElementById('npsScore').value = 5;
+                document.getElementById('npsValue').textContent = '5';
             } else {
                 responseBox.classList.add('error');
-                responseBox.textContent = `Error: ${result.message}`;
+                responseText.textContent = `Error: ${result.message}`;
             }
         } catch (error) {
             responseBox.classList.add('error');
-            responseBox.textContent = `Error: ${error.message}`;
+            responseText.textContent = `Error: ${error.message}`;
         }
     });
 }
@@ -143,6 +176,9 @@ function initChat() {
     const sendBtn = document.getElementById('sendChat');
     const chatMessages = document.getElementById('chatMessages');
     const productFilter = document.getElementById('chatProductFilter');
+    const minNps = document.getElementById('minNps');
+    const maxNps = document.getElementById('maxNps');
+    const categoryFilter = document.getElementById('categoryFilter');
 
     async function sendMessage() {
         const message = chatInput.value.trim();
@@ -153,14 +189,26 @@ function initChat() {
 
         const typingIndicator = addTypingIndicator();
 
+        const chatRequest = {
+            message: message,
+            product_filter: productFilter.value || null
+        };
+
+        if (minNps.value) {
+            chatRequest.min_nps = parseInt(minNps.value);
+        }
+        if (maxNps.value) {
+            chatRequest.max_nps = parseInt(maxNps.value);
+        }
+        if (categoryFilter.value) {
+            chatRequest.categories = [categoryFilter.value];
+        }
+
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: message,
-                    product_filter: productFilter.value || null
-                })
+                body: JSON.stringify(chatRequest)
             });
 
             const result = await response.json();
@@ -273,10 +321,84 @@ function initSettings() {
     });
 }
 
+function initProviderSettings() {
+    const llmProvider = document.getElementById('llmProvider');
+    const embeddingProvider = document.getElementById('embeddingProvider');
+    const llmProviderInfo = document.getElementById('llmProviderInfo');
+    const embeddingProviderInfo = document.getElementById('embeddingProviderInfo');
+    const providerStatus = document.getElementById('providerStatus');
+
+    const providerModels = {
+        'ollama': {
+            'llm': 'llama3.2:1b',
+            'embedding': 'nomic-embed-text'
+        },
+        'openai': {
+            'llm': 'gpt-4o-mini',
+            'embedding': 'text-embedding-3-small'
+        },
+        'google': {
+            'llm': 'gemini-2.0-flash',
+            'embedding': 'text-embedding-004'
+        }
+    };
+
+    function updateProviderInfo() {
+        const llm = llmProvider.value;
+        const embedding = embeddingProvider.value;
+
+        llmProviderInfo.textContent = `Model: ${providerModels[llm].llm}`;
+        embeddingProviderInfo.textContent = `Model: ${providerModels[embedding].embedding}`;
+    }
+
+    function validateProviders() {
+        let messages = [];
+
+        if (llmProvider.value === 'ollama') {
+            messages.push('Chat: Using Ollama (local). Ensure Ollama server is running.');
+        } else if (llmProvider.value === 'openai') {
+            messages.push('Chat: Using OpenAI (cloud).');
+        } else if (llmProvider.value === 'google') {
+            messages.push('Chat: Using Google Gemini (cloud).');
+        }
+
+        if (embeddingProvider.value === 'ollama') {
+            messages.push('Embedding: Using Ollama (local).');
+        } else if (embeddingProvider.value === 'openai') {
+            messages.push('Embedding: Using OpenAI (cloud).');
+        } else if (embeddingProvider.value === 'google') {
+            messages.push('Embedding: Using Google (cloud).');
+        }
+
+        if (llmProvider.value === 'ollama' || embeddingProvider.value === 'ollama') {
+            providerStatus.className = 'provider-status warning';
+            providerStatus.textContent = '⚠️ Ollama selected. Please ensure Ollama server is running at http://localhost:11434';
+        } else {
+            providerStatus.className = 'provider-status success';
+            providerStatus.textContent = '✓ Using cloud providers. Configuration OK.';
+        }
+    }
+
+    llmProvider.addEventListener('change', () => {
+        updateProviderInfo();
+        validateProviders();
+    });
+
+    embeddingProvider.addEventListener('change', () => {
+        updateProviderInfo();
+        validateProviders();
+    });
+
+    updateProviderInfo();
+    validateProviders();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     applyTheme();
     initTabs();
+    initNpsSlider();
     initFeedbackForm();
     initChat();
     initSettings();
+    initProviderSettings();
 });

@@ -3,7 +3,10 @@ uvicorn
 langgraph
 langchain
 langchain-openai
+langchain-google-genai
+langchain-ollama
 chromadb
 python-dotenv
 pydantic
 jinja2
+requests

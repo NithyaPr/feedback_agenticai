@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
-from app.api import feedback, chat
+from app.api import feedback, chat, categories
 from config.settings import settings
 import os
 
@@ -19,6 +19,7 @@ static_dir = BASE_DIR / "static"
 
 app.include_router(feedback.router)
 app.include_router(chat.router)
+app.include_router(categories.router)
 
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

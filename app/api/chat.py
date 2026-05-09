@@ -11,7 +11,10 @@ async def chat_with_feedbacks(request: ChatRequest):
     try:
         result = run_chat_workflow(
             message=request.message,
-            product_filter=request.product_filter
+            product_filter=request.product_filter,
+            min_nps=request.min_nps,
+            max_nps=request.max_nps,
+            categories_filter=request.categories
         )
 
         if result.get("error"):
@@ -27,6 +30,8 @@ async def chat_with_feedbacks(request: ChatRequest):
             {
                 "text": fb.get("text"),
                 "product": fb.get("metadata", {}).get("product"),
+                "nps_score": fb.get("metadata", {}).get("nps_score"),
+                "categories": fb.get("metadata", {}).get("categories", []),
                 "user_id": fb.get("metadata", {}).get("user_id"),
                 "timestamp": fb.get("metadata", {}).get("timestamp")
             }
