@@ -4,7 +4,7 @@ from app.services.llm_service import llm_service
 
 
 class FeedbackState(TypedDict):
-    product: str
+    product: Optional[str]
     feedback_text: str
     nps_score: int
     user_id: Optional[str]
@@ -47,14 +47,15 @@ def categorize_feedback_node(state: FeedbackState) -> FeedbackState:
 
     try:
         categories = llm_service.categorize_feedback(state["feedback_text"])
-        state["categories"] = categories
+        state["categories"] = categories if categories else []
 
-        if state.get("feedback_id"):
+        if state.get("feedback_id") and categories:
             vector_store.update_feedback_categories(
                 state["feedback_id"],
                 categories
             )
     except Exception as e:
+        state["categories"] = []
         state["error"] = f"Failed to categorize feedback: {str(e)}"
     return state
 

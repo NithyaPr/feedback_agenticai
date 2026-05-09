@@ -311,6 +311,28 @@ h2 {
     font-size: 0.9rem;
 }
 
+.message.bot .message-content h3 {
+    margin: 15px 0 10px 0;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.message.bot .message-content h4 {
+    margin: 12px 0 8px 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.message.bot .message-content p {
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+.message.bot .message-content li {
+    margin: 4px 0;
+    line-height: 1.4;
+}
+
 .chat-input {
     display: flex;
     gap: 10px;

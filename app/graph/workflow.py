@@ -1,4 +1,5 @@
 from langgraph.graph import StateGraph, END
+from typing import Optional
 from app.graph.nodes import (
     FeedbackState,
     ChatState,
@@ -43,13 +44,13 @@ chat_graph = create_chat_graph()
 
 
 def run_feedback_workflow(
-    product: str,
+    product: Optional[str],
     feedback_text: str,
     nps_score: int,
     user_id: str = None
 ) -> dict:
     initial_state: FeedbackState = {
-        "product": product,
+        "product": product or "Unknown",
         "feedback_text": feedback_text,
         "nps_score": nps_score,
         "user_id": user_id,

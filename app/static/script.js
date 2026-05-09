@@ -225,10 +225,47 @@ function initChat() {
         }
     }
 
+    function formatText(text) {
+        if (!text) return '';
+        let formatted = text
+            .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+            .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+            .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>');
+        
+        const lines = formatted.split('\n');
+        let inList = false;
+        let result = [];
+        
+        for (let line of lines) {
+            if (line.startsWith('<li>')) {
+                if (!inList) {
+                    result.push('<ul>');
+                    inList = true;
+                }
+                result.push(line);
+            } else {
+                if (inList) {
+                    result.push('</ul>');
+                    inList = false;
+                }
+                if (line.trim()) {
+                    result.push(`<p>${line}</p>`);
+                }
+            }
+        }
+        if (inList) result.push('</ul>');
+        
+        return result.join('');
+    }
+
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
-        messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+        const formattedText = sender === 'bot' ? formatText(text) : text;
+        messageDiv.innerHTML = `<div class="message-content">${formattedText}</div>`;
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -393,6 +430,25 @@ function initProviderSettings() {
     validateProviders();
 }
 
+async function initCategories() {
+    try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (categoryFilter) {
+            data.categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                categoryFilter.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load categories:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     applyTheme();
     initTabs();
@@ -400,5 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initFeedbackForm();
     initChat();
     initSettings();
+    initCategories();
     initProviderSettings();
 });

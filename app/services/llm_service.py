@@ -59,13 +59,13 @@ Response:"""
                 examples_text += f"- Feedback: \"{ex['feedback']}\" → Categories: {', '.join(ex['categories'])}\n"
             examples_text += "\n"
 
-        prompt = f"""You are a feedback categorization assistant. Given user feedback, assign relevant categories from this list: {categories_text}
+        prompt = f"""You are a feedback categorization assistant. Given user feedback, assign ONLY the top 3 most relevant categories from this list: {categories_text}
 
 {examples_text}
 Now categorize this feedback:
 Feedback: "{feedback_text}"
 
-Respond with ONLY the category names separated by commas. If no category fits, say "none".
+Respond with ONLY the top 3 category names separated by commas. If no category fits, say "none".
 Example response format: category1, category2, category3"""
 
         response = self.llm.invoke(prompt)
@@ -79,7 +79,7 @@ Example response format: category1, category2, category3"""
         valid_categories = [c.lower() for c in categories]
         filtered = [cat for cat in assigned_categories if cat.lower() in valid_categories]
 
-        return list(set(filtered))
+        return list(set(filtered))[:3]
 
     def generate_chat_response(
         self,
@@ -112,13 +112,12 @@ Here are the most relevant user feedbacks{product_context}:
 
 {context}
 
-Based on this feedback data, provide a helpful analysis that:
-1. Answers the product manager's question
-2. Identifies patterns, trends, or key issues
-3. Provides actionable insights where possible
-4. Be specific and reference actual feedback when relevant
+Based on this feedback data, provide a concise response:
+- Use bullet points and short paragraphs
+- Focus on key insights and actionable takeaways
+- Keep it brief and easy to scan
 
-If there isn't enough feedback to answer the question, be honest about it.
+If there isn't enough feedback, say so briefly.
 
 Response:"""
 

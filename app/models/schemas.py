@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class FeedbackRequest(BaseModel):
-    product: str = Field(..., description="Product name")
+    product: Optional[str] = Field(None, description="Product name (optional)")
     feedback_text: str = Field(..., description="User's feedback")
     nps_score: int = Field(..., ge=1, le=10, description="NPS score from 1 to 10")
     user_id: Optional[str] = Field(None, description="Optional user identifier")
