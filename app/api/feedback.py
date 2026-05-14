@@ -12,6 +12,7 @@ async def submit_feedback(request: FeedbackRequest):
         result = run_feedback_workflow(
             product=request.product,
             feedback_text=request.feedback_text,
+            nps_score=request.nps_score,
             user_id=request.user_id
         )
 
@@ -20,6 +21,8 @@ async def submit_feedback(request: FeedbackRequest):
                 success=False,
                 message=result["error"],
                 llm_response=None,
+                nps_score=request.nps_score,
+                categories=[],
                 timestamp=datetime.now()
             )
 
@@ -27,6 +30,8 @@ async def submit_feedback(request: FeedbackRequest):
             success=True,
             message="Feedback submitted successfully",
             llm_response=result.get("llm_response"),
+            nps_score=request.nps_score,
+            categories=result.get("categories", []),
             timestamp=datetime.now()
         )
 

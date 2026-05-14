@@ -30,7 +30,17 @@
                     <form id="feedbackForm">
                         <div class="form-group">
                             <label for="product">Product Name</label>
-                            <input type="text" id="product" name="product" placeholder="Enter product name" required>
+                            <input type="text" id="product" name="product" placeholder="Enter product name (optional)">
+                        </div>
+                        <div class="form-group">
+                            <label for="npsScore">NPS Score (1-10)</label>
+                            <div class="nps-slider-container">
+                                <input type="range" id="npsScore" name="npsScore" min="1" max="10" value="5" class="nps-slider">
+                                <div class="nps-labels">
+                                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                                </div>
+                                <div class="nps-value-display">Score: <span id="npsValue">5</span></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="feedbackText">Your Feedback</label>
@@ -42,7 +52,16 @@
                         </div>
                         <button type="submit" class="btn primary">Submit Feedback</button>
                     </form>
-                    <div id="feedbackResponse" class="response-box hidden"></div>
+                    <div id="feedbackResponse" class="response-box hidden">
+                        <div id="responseText"></div>
+                        <div id="responseCategories" class="category-tags-container hidden">
+                            <span class="category-label">Categories:</span>
+                            <div id="categoryTags" class="category-tags"></div>
+                        </div>
+                        <div id="responseNps" class="nps-display hidden">
+                            <span class="nps-label">NPS Score: </span><span id="npsScoreDisplay"></span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -50,9 +69,57 @@
                 <div class="chat-container">
                     <div class="chat-header">
                         <h2>Product Manager Chat</h2>
-                        <div class="product-filter">
-                            <label for="chatProductFilter">Filter by Product:</label>
+                    </div>
+                    <div class="chat-filters">
+                        <div class="filter-group">
+                            <label for="chatProductFilter">Product:</label>
                             <input type="text" id="chatProductFilter" placeholder="All products">
+                        </div>
+                        <div class="filter-group">
+                            <label for="minNps">Min NPS:</label>
+                            <select id="minNps">
+                                <option value="">Any</option>
+                                <option value="1">1 (Detractor)</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7 (Passive)</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10 (Promoter)</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="maxNps">Max NPS:</label>
+                            <select id="maxNps">
+                                <option value="">Any</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6 (Detractor)</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10 (Promoter)</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="categoryFilter">Category:</label>
+                            <select id="categoryFilter">
+                                <option value="">All Categories</option>
+                                <option value="delivery">Delivery</option>
+                                <option value="billing">Billing</option>
+                                <option value="product">Product</option>
+                                <option value="quality">Quality</option>
+                                <option value="customer service">Customer Service</option>
+                                <option value="features">Features</option>
+                                <option value="usability">Usability</option>
+                                <option value="support">Support</option>
+                            </select>
                         </div>
                     </div>
                     <div class="chat-messages" id="chatMessages">
@@ -63,6 +130,8 @@
                                     <li>"What are users struggling with?"</li>
                                     <li>"What features do users like most?"</li>
                                     <li>"What are the top complaints for Product X?"</li>
+                                    <li>"Show me detractors (NPS 1-6)"</li>
+                                    <li>"What feedback about billing?"</li>
                                 </ul>
                             </div>
                         </div>
@@ -128,6 +197,29 @@
                         </div>
                     </div>
                     <button class="btn secondary" id="resetTheme">Reset to Default</button>
+
+                    <div class="provider-settings">
+                        <h3>AI Provider Settings</h3>
+                        <div class="provider-group">
+                            <label for="llmProvider">Chat Model Provider:</label>
+                            <select id="llmProvider">
+                                <option value="ollama">Ollama (Local)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="google">Google Gemini</option>
+                            </select>
+                            <span class="provider-info" id="llmProviderInfo">Model: llama3.2:1b</span>
+                        </div>
+                        <div class="provider-group">
+                            <label for="embeddingProvider">Embedding Model Provider:</label>
+                            <select id="embeddingProvider">
+                                <option value="ollama">Ollama (Local)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="google">Google Gemini</option>
+                            </select>
+                            <span class="provider-info" id="embeddingProviderInfo">Model: nomic-embed-text</span>
+                        </div>
+                        <div id="providerStatus" class="provider-status"></div>
+                    </div>
                 </div>
             </div>
         </div>

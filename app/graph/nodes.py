@@ -1,23 +1,28 @@
-from typing import TypedDict
+from typing import TypedDict, List, Optional
 from app.services.vector_store import vector_store
 from app.services.llm_service import llm_service
 
 
 class FeedbackState(TypedDict):
-    product: str
+    product: Optional[str]
     feedback_text: str
-    user_id: str | None
-    feedback_id: str | None
-    llm_response: str | None
-    error: str | None
+    nps_score: int
+    user_id: Optional[str]
+    feedback_id: Optional[str]
+    categories: List[str]
+    llm_response: Optional[str]
+    error: Optional[str]
 
 
 class ChatState(TypedDict):
     message: str
-    product_filter: str | None
-    relevant_feedbacks: list | None
-    llm_response: str | None
-    error: str | None
+    product_filter: Optional[str]
+    min_nps: Optional[int]
+    max_nps: Optional[int]
+    categories_filter: Optional[List[str]]
+    relevant_feedbacks: Optional[List]
+    llm_response: Optional[str]
+    error: Optional[str]
 
 
 def store_feedback_node(state: FeedbackState) -> FeedbackState:
@@ -25,11 +30,33 @@ def store_feedback_node(state: FeedbackState) -> FeedbackState:
         feedback_id = vector_store.add_feedback(
             feedback_text=state["feedback_text"],
             product=state["product"],
-            user_id=state.get("user_id")
+            nps_score=state["nps_score"],
+            user_id=state.get("user_id"),
+            categories=[]
         )
         state["feedback_id"] = feedback_id
+        state["categories"] = []
     except Exception as e:
         state["error"] = f"Failed to store feedback: {str(e)}"
+    return state
+
+
+def categorize_feedback_node(state: FeedbackState) -> FeedbackState:
+    if state.get("error"):
+        return state
+
+    try:
+        categories = llm_service.categorize_feedback(state["feedback_text"])
+        state["categories"] = categories if categories else []
+
+        if state.get("feedback_id") and categories:
+            vector_store.update_feedback_categories(
+                state["feedback_id"],
+                categories
+            )
+    except Exception as e:
+        state["categories"] = []
+        state["error"] = f"Failed to categorize feedback: {str(e)}"
     return state
 
 
@@ -53,7 +80,10 @@ def retrieve_feedbacks_node(state: ChatState) -> ChatState:
         relevant_feedbacks = vector_store.query(
             query_text=state["message"],
             product_filter=state.get("product_filter"),
-            n_results=10
+            n_results=10,
+            min_nps=state.get("min_nps"),
+            max_nps=state.get("max_nps"),
+            categories=state.get("categories_filter")
         )
         state["relevant_feedbacks"] = relevant_feedbacks
     except Exception as e:
