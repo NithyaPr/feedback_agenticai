@@ -3,9 +3,13 @@ from typing import Optional
 from app.graph.nodes import (
     FeedbackState,
     ChatState,
+    check_duplicates_node,
+    check_technical_node,
     store_feedback_node,
-    categorize_feedback_node,
-    generate_feedback_response_node,
+    categorize_and_respond_node,
+    update_feedback_response_node,
+    route_to_team_node,
+    create_review_node,
     retrieve_feedbacks_node,
     generate_chat_response_node
 )
@@ -14,14 +18,22 @@ from app.graph.nodes import (
 def create_feedback_graph():
     workflow = StateGraph(FeedbackState)
 
+    workflow.add_node("check_duplicates", check_duplicates_node)
+    workflow.add_node("check_technical", check_technical_node)
     workflow.add_node("store_feedback", store_feedback_node)
-    workflow.add_node("categorize_feedback", categorize_feedback_node)
-    workflow.add_node("generate_response", generate_feedback_response_node)
+    workflow.add_node("categorize_and_respond", categorize_and_respond_node)
+    workflow.add_node("update_feedback_response", update_feedback_response_node)
+    workflow.add_node("route_to_team", route_to_team_node)
+    workflow.add_node("create_review", create_review_node)
 
-    workflow.set_entry_point("store_feedback")
-    workflow.add_edge("store_feedback", "categorize_feedback")
-    workflow.add_edge("categorize_feedback", "generate_response")
-    workflow.add_edge("generate_response", END)
+    workflow.set_entry_point("check_duplicates")
+    workflow.add_edge("check_duplicates", "check_technical")
+    workflow.add_edge("check_technical", "store_feedback")
+    workflow.add_edge("store_feedback", "categorize_and_respond")
+    workflow.add_edge("categorize_and_respond", "update_feedback_response")
+    workflow.add_edge("update_feedback_response", "route_to_team")
+    workflow.add_edge("route_to_team", "create_review")
+    workflow.add_edge("create_review", END)
 
     return workflow.compile()
 
@@ -57,7 +69,14 @@ def run_feedback_workflow(
         "feedback_id": None,
         "categories": [],
         "llm_response": None,
-        "error": None
+        "error": None,
+        "is_technical": False,
+        "duplicate_note": None,
+        "intent_note": None,
+        "needs_review": False,
+        "assigned_team": None,
+        "suggested_team": None,
+        "kb_references": None
     }
 
     result = feedback_graph.invoke(initial_state)

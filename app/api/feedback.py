@@ -32,7 +32,13 @@ async def submit_feedback(request: FeedbackRequest):
             llm_response=result.get("llm_response"),
             nps_score=request.nps_score,
             categories=result.get("categories", []),
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
+            is_technical=result.get("is_technical", False),
+            duplicate_note=result.get("duplicate_note"),
+            intent_note=result.get("intent_note"),
+            needs_review=result.get("needs_review", False),
+            assigned_team=result.get("assigned_team"),
+            kb_references=result.get("kb_references")
         )
 
     except Exception as e:

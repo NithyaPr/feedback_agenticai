@@ -7,7 +7,12 @@
     "customer service",
     "features",
     "usability",
-    "support"
+    "support",
+    "installation",
+    "warranty",
+    "cancellation",
+    "return",
+    "assembly"
   ],
   "few_shot_examples": [
   {
@@ -87,8 +92,36 @@
     "categories": ["support", "billing"]
   },
   {
-    "feedback": "The product is perfect, 10/10! But the box was slightly crushed. I don't really care because the item is fine, but just thought you should know.",
+    "feedback": "The product is perfect, 10/10! But the box was slightly crushed. I don't really care because the item is fine, but just thought you know.",
     "categories": ["product", "quality", "delivery"]
+  },
+  {
+    "feedback": "The furniture arrived but the assembly instructions are incomprehensible. I've been trying to put it together for 3 hours.",
+    "categories": ["installation", "assembly"]
+  },
+  {
+    "feedback": "My warranty expired 2 days ago and the hinges are already broken. This feels unfair given the price.",
+    "categories": ["warranty"]
+  },
+  {
+    "feedback": "I need to cancel my subscription before the next billing cycle. Your cancellation process requires me to call during business hours only.",
+    "categories": ["cancellation"]
+  },
+  {
+    "feedback": "The dress arrived with a stain on it. I want to return it for a full refund but your return portal keeps giving me an error.",
+    "categories": ["return", "usability"]
+  },
+  {
+    "feedback": "The technician who came to install the appliance damaged my kitchen counter. Very disappointing service.",
+    "categories": ["installation"]
+  },
+  {
+    "feedback": "I bought an extended warranty but when I tried to use it, the company said the issue wasn't covered. Very misleading.",
+    "categories": ["warranty"]
+  },
+  {
+    "feedback": "The item was advertised as easy to assemble but the pieces didn't match the diagram. Complete waste of time.",
+    "categories": ["assembly", "product"]
   }
 ]
 }

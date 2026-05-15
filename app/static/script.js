@@ -115,6 +115,11 @@ function initFeedbackForm() {
     const categoryTags = document.getElementById('categoryTags');
     const responseNps = document.getElementById('responseNps');
     const npsScoreDisplay = document.getElementById('npsScoreDisplay');
+    const kbRefTags = document.getElementById('kbRefTags');
+    const responseKbRefs = document.getElementById('responseKbRefs');
+    const submitBtn = document.getElementById('submitFeedbackBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const submitSpinner = document.getElementById('submitSpinner');
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -128,11 +133,17 @@ function initFeedbackForm() {
             user_id: document.getElementById('userId').value || null
         };
 
+        submitBtn.disabled = true;
+        submitBtnText.textContent = 'Processing...';
+        submitSpinner.classList.remove('hidden');
+
         responseBox.classList.remove('hidden', 'success', 'error');
         responseBox.style.display = 'block';
-        responseText.textContent = 'Submitting feedback...';
+        responseText.innerHTML = '<div class="processing-indicator"><span class="spinner" style="margin-right:8px;"></span>Processing your feedback...</div>';
+        responseKbRefs.classList.add('hidden');
         responseCategories.classList.add('hidden');
         responseNps.classList.add('hidden');
+        document.getElementById('responseReview').classList.add('hidden');
 
         try {
             const response = await fetch('/api/feedback', {
@@ -145,7 +156,14 @@ function initFeedbackForm() {
 
             if (result.success) {
                 responseBox.classList.add('success');
-                responseText.innerHTML = `<strong>Thank you for your feedback!</strong><br><br>${result.llm_response}`;
+                responseText.innerHTML = `<strong>Thank you for your feedback!</strong><br><br><strong>Sent Response:</strong><br>${result.llm_response}`;
+
+                if (result.kb_references && result.kb_references.length > 0) {
+                    kbRefTags.innerHTML = result.kb_references.map(ref =>
+                        `<span class="kb-ref-tag">${ref}</span>`
+                    ).join('');
+                    responseKbRefs.classList.remove('hidden');
+                }
 
                 if (result.categories && result.categories.length > 0) {
                     categoryTags.innerHTML = result.categories.map(cat =>
@@ -157,6 +175,17 @@ function initFeedbackForm() {
                 npsScoreDisplay.textContent = result.nps_score;
                 responseNps.classList.remove('hidden');
 
+                const responseReview = document.getElementById('responseReview');
+                if (result.needs_review) {
+                    const responseTeam = document.getElementById('responseTeam');
+                    const responseStatus = document.getElementById('responseStatus');
+                    responseTeam.innerHTML = `Assigned to: <strong>${result.assigned_team}</strong>`;
+                    responseStatus.textContent = 'Flagged for Support Review';
+                    responseReview.classList.remove('hidden');
+                } else {
+                    responseReview.classList.add('hidden');
+                }
+
                 form.reset();
                 document.getElementById('npsScore').value = 5;
                 document.getElementById('npsValue').textContent = '5';
@@ -167,6 +196,10 @@ function initFeedbackForm() {
         } catch (error) {
             responseBox.classList.add('error');
             responseText.textContent = `Error: ${error.message}`;
+        } finally {
+            submitBtn.disabled = false;
+            submitBtnText.textContent = 'Submit Feedback';
+            submitSpinner.classList.add('hidden');
         }
     });
 }
@@ -180,11 +213,38 @@ function initChat() {
     const maxNps = document.getElementById('maxNps');
     const categoryFilter = document.getElementById('categoryFilter');
 
+    let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+
+    function restoreChatHistory() {
+        if (chatHistory.length > 0) {
+            chatMessages.innerHTML = '';
+            chatHistory.forEach(msg => addMessage(msg.text, msg.sender, false));
+        }
+    }
+
+    function saveToHistory(text, sender) {
+        chatHistory.push({ text, sender, timestamp: Date.now() });
+        if (chatHistory.length > 50) chatHistory.shift();
+        localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+    }
+
+    function clearHistory() {
+        chatHistory = [];
+        localStorage.removeItem('chatHistory');
+        chatMessages.innerHTML = '';
+        addWelcomeMessage();
+    }
+
+    function addWelcomeMessage() {
+        addMessage('Hello! I\'m your product insights assistant. Ask me questions about user feedback, such as:\n- "What are users struggling with?"\n- "What features do users like most?"\n- "What are the top complaints for Product X?"\n- "Show me detractors (NPS 1-6)"\n- "What feedback about billing?"', 'bot', false);
+    }
+
     async function sendMessage() {
         const message = chatInput.value.trim();
         if (!message) return;
 
         addMessage(message, 'user');
+        saveToHistory(message, 'user');
         chatInput.value = '';
 
         const typingIndicator = addTypingIndicator();
@@ -216,12 +276,15 @@ function initChat() {
 
             if (result.success) {
                 addMessage(result.response, 'bot');
+                saveToHistory(result.response, 'bot');
             } else {
                 addMessage(`Error: ${result.response}`, 'bot');
+                saveToHistory(`Error: ${result.response}`, 'bot');
             }
         } catch (error) {
             typingIndicator.remove();
             addMessage(`Error: ${error.message}`, 'bot');
+            saveToHistory(`Error: ${error.message}`, 'bot');
         }
     }
 
@@ -261,7 +324,7 @@ function initChat() {
         return result.join('');
     }
 
-    function addMessage(text, sender) {
+    function addMessage(text, sender, save = true) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
         const formattedText = sender === 'bot' ? formatText(text) : text;
@@ -284,6 +347,11 @@ function initChat() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
+    document.getElementById('clearChat')?.addEventListener('click', () => {
+        if (confirm('Clear all chat history?')) clearHistory();
+    });
+
+    restoreChatHistory();
 }
 
 function initSettings() {
@@ -437,6 +505,7 @@ async function initCategories() {
         
         const categoryFilter = document.getElementById('categoryFilter');
         if (categoryFilter) {
+            categoryFilter.innerHTML = '<option value="">All Categories</option>';
             data.categories.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat;
@@ -449,6 +518,477 @@ async function initCategories() {
     }
 }
 
+let selectedReviewId = null;
+let queueRefreshInterval = null;
+let currentQueueFilter = 'all';
+
+async function initSupportQueue() {
+    const queueList = document.getElementById('queueList');
+    const teamFilter = document.getElementById('teamFilter');
+    const queueActions = document.getElementById('queueActions');
+    const filterTabs = document.querySelectorAll('.filter-tab');
+
+    await loadTeams();
+    await loadReviews();
+    startAutoRefresh();
+
+    teamFilter.addEventListener('change', loadReviews);
+
+    filterTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            filterTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentQueueFilter = tab.dataset.filter;
+            loadReviews();
+        });
+    });
+
+    document.getElementById('viewFeedback')?.addEventListener('click', viewFeedbackDetails);
+    document.getElementById('addNotes')?.addEventListener('click', addReviewNotes);
+    document.getElementById('sendFollowup')?.addEventListener('click', sendFollowup);
+    document.getElementById('resolveReview')?.addEventListener('click', resolveReview);
+
+    async function loadTeams() {
+        try {
+            const response = await fetch('/api/teams');
+            const teams = await response.json();
+            const savedValue = teamFilter.value;
+            teamFilter.innerHTML = '<option value="">All Teams</option>';
+            teams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team.name;
+                option.textContent = team.name;
+                teamFilter.appendChild(option);
+            });
+            if (savedValue) teamFilter.value = savedValue;
+        } catch (error) {
+            console.error('Failed to load teams:', error);
+        }
+    }
+
+    async function loadReviews() {
+        const team = teamFilter.value;
+        const url = team ? `/api/reviews?team=${encodeURIComponent(team)}` : '/api/reviews';
+
+        try {
+            const response = await fetch(url);
+            const allReviews = await response.json();
+
+            let filteredReviews = allReviews;
+            if (currentQueueFilter === 'pending') {
+                filteredReviews = allReviews.filter(r => r.status !== 'resolved');
+            } else if (currentQueueFilter === 'resolved') {
+                filteredReviews = allReviews.filter(r => r.status === 'resolved');
+            }
+
+            updateStats(allReviews);
+            updateCategorySummary(allReviews);
+
+            if (filteredReviews.length === 0) {
+                queueList.innerHTML = '<div class="queue-empty">No reviews found</div>';
+                queueActions.classList.add('hidden');
+                return;
+            }
+
+            queueList.innerHTML = filteredReviews.map(review => `
+                <div class="queue-card ${review.status === 'resolved' ? 'resolved' : ''}" data-id="${review.id}">
+                    <div class="queue-card-header">
+                        <span class="queue-card-email">${review.user_id}</span>
+                        <div class="queue-card-meta">
+                            <span>NPS: ${review.nps_score}</span>
+                            <span>${formatTimeAgo(review.created_at)}</span>
+                        </div>
+                    </div>
+                    <div class="queue-card-meta">
+                        <span class="team-badge">${review.assigned_team}</span>
+                        <span class="status-badge status-${review.status}">${review.status}</span>
+                    </div>
+                    <div class="queue-card-categories">
+                        ${review.categories[0] ? `<span class="category-tag">${review.categories[0]}</span>` : ''}
+                    </div>
+                    <div class="queue-card-feedback">"${review.feedback_text.substring(0, 150)}${review.feedback_text.length > 150 ? '...' : ''}"</div>
+                </div>
+            `).join('');
+
+            queueList.querySelectorAll('.queue-card').forEach(card => {
+                card.addEventListener('click', () => selectReview(card.dataset.id));
+            });
+        } catch (error) {
+            queueList.innerHTML = '<div class="queue-empty">Error loading reviews</div>';
+        }
+    }
+
+    function updateStats(reviews) {
+        const total = reviews.length;
+        const pending = reviews.filter(r => r.status !== 'resolved').length;
+        const resolved = reviews.filter(r => r.status === 'resolved').length;
+
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('pendingCount').textContent = pending;
+        document.getElementById('resolvedCount').textContent = resolved;
+    }
+
+    function updateCategorySummary(reviews) {
+        const categoryCounts = {};
+        reviews.forEach(r => {
+            const primaryCat = r.categories[0];
+            if (primaryCat) {
+                categoryCounts[primaryCat] = (categoryCounts[primaryCat] || 0) + 1;
+            }
+        });
+
+        const summaryEl = document.getElementById('categorySummary');
+        if (Object.keys(categoryCounts).length === 0) {
+            summaryEl.innerHTML = '';
+            return;
+        }
+
+        const sortedCats = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+        summaryEl.innerHTML = sortedCats.map(([cat, count]) =>
+            `<span class="category-stat"><span class="category-name">${cat}</span>: <span class="category-count">${count}</span></span>`
+        ).join('');
+    }
+
+    function startAutoRefresh() {
+        queueRefreshInterval = setInterval(loadReviews, 10000);
+    }
+
+    function selectReview(reviewId) {
+        selectedReviewId = reviewId;
+        queueList.querySelectorAll('.queue-card').forEach(c => c.classList.remove('selected'));
+        queueList.querySelector(`[data-id="${reviewId}"]`)?.classList.add('selected');
+        queueActions.classList.remove('hidden');
+    }
+
+    async function viewFeedbackDetails() {
+        if (!selectedReviewId) return;
+        try {
+            const response = await fetch(`/api/reviews/${selectedReviewId}`);
+            if (!response.ok) {
+                alert('Failed to load feedback details (server error)');
+                return;
+            }
+            const review = await response.json();
+
+            const modal = document.getElementById('feedbackDetailModal') || createDetailModal();
+            document.getElementById('detailUser').textContent = review.user_id || 'Anonymous';
+            document.getElementById('detailNps').textContent = review.nps_score;
+            document.getElementById('detailTeam').textContent = review.assigned_team || 'Unassigned';
+            document.getElementById('detailStatus').textContent = review.status;
+            document.getElementById('detailCategories').textContent = (review.categories || []).join(', ');
+            document.getElementById('detailFeedbackText').textContent = review.feedback_text;
+            document.getElementById('detailOriginalResponse').textContent = review.original_response || 'No response';
+            document.body.classList.add('modal-open');
+            modal.classList.add('show');
+        } catch (error) {
+            alert('Failed to load feedback details: ' + error.message);
+        }
+    }
+
+    function createDetailModal() {
+        const modal = document.createElement('div');
+        modal.id = 'feedbackDetailModal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Feedback Details <button class="modal-close">&times;</button></h3>
+                <div class="detail-row"><strong>User:</strong> <span id="detailUser"></span></div>
+                <div class="detail-row"><strong>NPS:</strong> <span id="detailNps"></span></div>
+                <div class="detail-row"><strong>Team:</strong> <span id="detailTeam"></span></div>
+                <div class="detail-row"><strong>Status:</strong> <span id="detailStatus"></span></div>
+                <div class="detail-row"><strong>Categories:</strong> <span id="detailCategories"></span></div>
+                <div class="detail-section"><strong>Feedback:</strong><p id="detailFeedbackText"></p></div>
+                <div class="detail-section"><strong>AI Response:</strong><p id="detailOriginalResponse"></p></div>
+                <div style="text-align:right;margin-top:16px;">
+                    <button class="btn secondary btn-close-modal">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target.closest('.modal-close, .btn-close-modal') || e.target === modal) {
+                modal.classList.remove('show');
+                document.body.classList.remove('modal-open');
+            }
+        });
+        return modal;
+    }
+
+    function showInputDialog(title, placeholder, confirmLabel) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `
+                <div class="modal-content" style="max-width:450px;">
+                    <h3>${title} <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></h3>
+                    <textarea id="dialogInput" placeholder="${placeholder}"
+                        style="width:100%;min-height:100px;margin:12px 0;padding:8px;border-radius:8px;
+                        border:1px solid var(--border-color);background:var(--bg-color);
+                        color:var(--text-color);resize:vertical;font-family:inherit;font-size:0.9rem;
+                        box-sizing:border-box;"></textarea>
+                    ${title === 'Send Follow-up' ? '<p style="color:var(--warning-color);font-size:0.85rem;margin:-8px 0 12px 0;">This will resolve the review after sending.</p>' : ''}
+                    <div style="display:flex;gap:8px;justify-content:flex-end;">
+                        <button class="btn secondary" id="dialogCancel">Cancel</button>
+                        <button class="btn primary" id="dialogConfirm">${confirmLabel}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => overlay.classList.add('show'), 10);
+
+            const input = overlay.querySelector('#dialogInput');
+            setTimeout(() => input.focus(), 100);
+
+            overlay.querySelector('#dialogCancel').onclick = () => { overlay.remove(); resolve(null); };
+            overlay.querySelector('#dialogConfirm').onclick = () => {
+                const val = input.value.trim();
+                overlay.remove();
+                resolve(val || null);
+            };
+            overlay.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') { overlay.remove(); resolve(null); }
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    const val = input.value.trim();
+                    overlay.remove();
+                    resolve(val || null);
+                }
+            });
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(null); } });
+        });
+    }
+
+    async function addReviewNotes() {
+        if (!selectedReviewId) return;
+        const notes = await showInputDialog('Add Notes', 'Enter internal notes...', 'Save Notes');
+        if (!notes) return;
+        try {
+            await fetch(`/api/reviews/${selectedReviewId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'add_notes', notes })
+            });
+        } catch (e) {
+            alert('Failed to save notes');
+        }
+        loadReviews();
+    }
+
+    async function sendFollowup() {
+        if (!selectedReviewId) return;
+        const text = await showInputDialog('Send Follow-up', 'Enter your response to the user...', 'Send & Resolve');
+        if (!text) return;
+        try {
+            await fetch(`/api/reviews/${selectedReviewId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'send_followup', final_response: text })
+            });
+        } catch (e) {
+            alert('Failed to send follow-up');
+        }
+        loadReviews();
+    }
+
+    async function resolveReview() {
+        if (!selectedReviewId) return;
+        const notes = await showInputDialog('Resolve Review', 'Optional resolution note...', 'Resolve');
+        if (notes === null) return;
+        try {
+            await fetch(`/api/reviews/${selectedReviewId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'add_notes', notes: notes || 'Resolved without notes' })
+            });
+            await fetch(`/api/reviews/${selectedReviewId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'resolve' })
+            });
+        } catch (e) {
+            alert('Failed to resolve review');
+        }
+        selectedReviewId = null;
+        queueActions.classList.add('hidden');
+        loadReviews();
+    }
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000 / 60);
+    if (diff < 60) return `${diff}m ago`;
+    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+    return `${Math.floor(diff / 1440)}d ago`;
+}
+
+let previewAutoRefresh = null;
+let currentPreviewFilter = 'all';
+let currentPreviewUser = '';
+
+async function initPreviewUser() {
+    const previewBtn = document.getElementById('previewUserBtn');
+    const closeBtn = document.getElementById('closePreview');
+    const overlay = document.getElementById('previewOverlay');
+    const refreshBtn = document.getElementById('refreshPreview');
+    const userSelect = document.getElementById('previewUserFilter');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+
+    previewBtn.addEventListener('click', () => {
+        document.getElementById('previewPanel').classList.add('open');
+        overlay.classList.add('show');
+        loadUserIds();
+        loadPreviewData();
+        startAutoRefresh();
+    });
+
+    function closePreview() {
+        document.getElementById('previewPanel').classList.remove('open');
+        overlay.classList.remove('show');
+        stopAutoRefresh();
+    }
+
+    closeBtn.addEventListener('click', closePreview);
+    overlay.addEventListener('click', closePreview);
+
+    refreshBtn.addEventListener('click', loadPreviewData);
+
+    userSelect.addEventListener('change', () => {
+        currentPreviewUser = userSelect.value;
+        loadPreviewData();
+    });
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentPreviewFilter = btn.dataset.filter;
+            loadPreviewData();
+        });
+    });
+
+    async function loadUserIds() {
+        try {
+            const response = await fetch('/api/user-ids');
+            const userIds = await response.json();
+            const savedValue = userSelect.value;
+            userSelect.innerHTML = '<option value="">All Users</option>';
+            userIds.forEach(uid => {
+                const option = document.createElement('option');
+                option.value = uid;
+                option.textContent = uid;
+                userSelect.appendChild(option);
+            });
+            if (savedValue && userIds.includes(savedValue)) {
+                userSelect.value = savedValue;
+            }
+        } catch (error) {
+            console.error('Failed to load user IDs:', error);
+        }
+    }
+
+    async function loadPreviewData() {
+        try {
+            const url = `/api/preview-user${currentPreviewUser ? '?user_id=' + encodeURIComponent(currentPreviewUser) : ''}`;
+            console.log('Loading preview data from:', url);
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch preview data: ' + response.status);
+            }
+            
+            const data = await response.json();
+            console.log('Preview data:', data);
+
+            document.getElementById('statTotal').textContent = data.stats.total;
+            document.getElementById('statAI').textContent = data.stats.ai_responses;
+            document.getElementById('statHuman').textContent = data.stats.human_followups;
+            document.getElementById('statResolved').textContent = data.stats.resolved;
+
+            let feedbacks = data.feedbacks || [];
+            console.log('Feedbacks to render:', feedbacks.length);
+
+            const listEl = document.getElementById('previewFeedbackList');
+            console.log('List element:', listEl);
+            console.log('Rendering', feedbacks.length, 'feedbacks');
+            
+            if (feedbacks.length === 0) {
+                listEl.innerHTML = '<div class="queue-empty">No feedbacks found</div>';
+            } else {
+                const cardsHtml = feedbacks.map(f => `
+                    <div class="feedback-card">
+                        <div class="feedback-card-header">
+                            <span class="feedback-user">${f.user_id || 'Anonymous'}</span>
+                            <span class="feedback-date">${formatTimeAgo(f.created_at)}</span>
+                            <span class="status-badge status-${f.status}">${f.status}</span>
+                        </div>
+                        <div class="feedback-original">
+                            <div class="feedback-original-label">Your Feedback</div>
+                            <div class="feedback-original-text">"${escapeHtml(f.feedback_text)}"</div>
+                        </div>
+                        <div class="response-section">
+                            <div class="response-label">
+                                <span class="badge-auto">Auto</span> AI Response
+                            </div>
+                            <div class="response-text ai-response">${escapeHtml(f.ai_response) || 'No response yet'}</div>
+                            ${f.kb_references && f.kb_references.length > 0 ? `
+                            <div class="preview-kb-refs">
+                                <span class="preview-kb-label">Based on:</span>
+                                <div class="preview-kb-tags">${f.kb_references.map(ref => `<span class="preview-kb-tag">${escapeHtml(ref)}</span>`).join('')}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        ${f.human_response ? `
+                        <div class="response-section">
+                            <div class="response-label">
+                                <span class="badge-human">Human</span> Team Follow-up
+                            </div>
+                            <div class="response-text human-response">${escapeHtml(f.human_response)}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+                listEl.innerHTML = cardsHtml;
+                console.log('Rendered', feedbacks.length, 'cards');
+            }
+
+            document.getElementById('lastUpdated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        } catch (error) {
+            console.error('Failed to load preview data:', error);
+            document.getElementById('previewFeedbackList').innerHTML = 
+                '<div class="queue-empty">Error loading data: ' + error.message + '</div>';
+        }
+    }
+
+    function startAutoRefresh() {
+        loadUserIds();
+        loadPreviewData();
+        let refreshCount = 0;
+        previewAutoRefresh = setInterval(() => {
+            refreshCount++;
+            loadPreviewData();
+            if (refreshCount % 3 === 0) {
+                loadUserIds();
+            }
+        }, 15000);
+    }
+
+    function stopAutoRefresh() {
+        if (previewAutoRefresh) {
+            clearInterval(previewAutoRefresh);
+            previewAutoRefresh = null;
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     applyTheme();
     initTabs();
@@ -458,4 +998,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initSettings();
     initCategories();
     initProviderSettings();
+    initSupportQueue();
+    initPreviewUser();
 });
