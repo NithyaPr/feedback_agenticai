@@ -17,6 +17,12 @@ class FeedbackResponse(BaseModel):
     nps_score: int = Field(..., description="NPS score")
     categories: Optional[List[str]] = Field(default_factory=list, description="Auto-detected categories")
     timestamp: datetime = Field(default_factory=datetime.now)
+    is_technical: Optional[bool] = False
+    duplicate_note: Optional[str] = None
+    intent_note: Optional[str] = None
+    needs_review: Optional[bool] = False
+    assigned_team: Optional[str] = None
+    kb_references: Optional[List[str]] = None
 
 
 class ChatRequest(BaseModel):

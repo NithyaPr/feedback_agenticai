@@ -21,6 +21,7 @@
         <nav class="tabs">
             <button class="tab active" data-tab="feedback">Submit Feedback</button>
             <button class="tab" data-tab="chat">PM Chat</button>
+            <button class="tab" data-tab="support-queue">Support Queue</button>
         </nav>
 
         <main>
@@ -50,16 +51,28 @@
                             <label for="userId">User ID (Optional)</label>
                             <input type="text" id="userId" name="userId" placeholder="Enter your user ID">
                         </div>
-                        <button type="submit" class="btn primary">Submit Feedback</button>
+                        <button type="submit" class="btn primary" id="submitFeedbackBtn">
+                            <span id="submitBtnText">Submit Feedback</span>
+                            <span id="submitSpinner" class="spinner hidden"></span>
+                        </button>
                     </form>
                     <div id="feedbackResponse" class="response-box hidden">
                         <div id="responseText"></div>
+                        <div id="responseKbRefs" class="kb-refs-container hidden">
+                            <span class="kb-refs-label">Based on:</span>
+                            <div id="kbRefTags" class="kb-refs-tags"></div>
+                        </div>
                         <div id="responseCategories" class="category-tags-container hidden">
                             <span class="category-label">Categories:</span>
                             <div id="categoryTags" class="category-tags"></div>
                         </div>
                         <div id="responseNps" class="nps-display hidden">
                             <span class="nps-label">NPS Score: </span><span id="npsScoreDisplay"></span>
+                        </div>
+                        <div id="responseReview" class="review-info hidden">
+                            <div class="review-divider">━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+                            <div id="responseTeam" class="team-info"></div>
+                            <div id="responseStatus" class="status-info"></div>
                         </div>
                     </div>
                 </div>
@@ -69,6 +82,7 @@
                 <div class="chat-container">
                     <div class="chat-header">
                         <h2>Product Manager Chat</h2>
+                        <button class="btn-text" id="clearChat" title="Clear chat history">Clear Chat</button>
                     </div>
                     <div class="chat-filters">
                         <div class="filter-group">
@@ -111,14 +125,6 @@
                             <label for="categoryFilter">Category:</label>
                             <select id="categoryFilter">
                                 <option value="">All Categories</option>
-                                <option value="delivery">Delivery</option>
-                                <option value="billing">Billing</option>
-                                <option value="product">Product</option>
-                                <option value="quality">Quality</option>
-                                <option value="customer service">Customer Service</option>
-                                <option value="features">Features</option>
-                                <option value="usability">Usability</option>
-                                <option value="support">Support</option>
                             </select>
                         </div>
                     </div>
@@ -142,7 +148,94 @@
                     </div>
                 </div>
             </section>
+
+            <section id="support-queue-section" class="tab-content">
+                <div class="support-queue-container">
+                    <div class="queue-header">
+                        <h2>Support Queue</h2>
+                        <button class="btn secondary" id="previewUserBtn" style="margin-right: 10px;">Preview as User</button>
+                        <div class="queue-filters">
+                            <select id="teamFilter">
+                                <option value="">All Teams</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="queue-summary" id="queueSummary">
+                        <div class="summary-stat">
+                            <span class="stat-label">Total:</span>
+                            <span class="stat-value" id="totalCount">0</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="stat-label">Pending:</span>
+                            <span class="stat-value" id="pendingCount">0</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="stat-label">Resolved:</span>
+                            <span class="stat-value" id="resolvedCount">0</span>
+                        </div>
+                    </div>
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="all">All</button>
+                        <button class="filter-tab" data-filter="pending">Pending</button>
+                        <button class="filter-tab" data-filter="resolved">Resolved</button>
+                    </div>
+                    <div class="category-summary" id="categorySummary"></div>
+                    <div class="queue-list" id="queueList">
+                        <div class="queue-empty">No pending reviews</div>
+                    </div>
+                    <div class="queue-actions hidden" id="queueActions">
+                        <button class="btn secondary" id="viewFeedback">View Details</button>
+                        <button class="btn secondary" id="addNotes" title="Internal notes (not visible to user)">Add Notes</button>
+                        <button class="btn primary" id="sendFollowup" title="Send response to user &amp; resolve review">Send Follow-up</button>
+                        <button class="btn success" id="resolveReview" title="Mark review as resolved">Resolve</button>
+                    </div>
+                </div>
+            </section>
         </main>
+
+        <div class="overlay" id="previewOverlay"></div>
+
+        <div class="preview-panel" id="previewPanel">
+            <div class="preview-panel-header">
+                <h3>User POV Preview</h3>
+                <button class="close-preview" id="closePreview">&times;</button>
+            </div>
+            <div class="preview-panel-body">
+                <div class="preview-stats" id="previewStats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statAI">0</div>
+                        <div class="stat-label">AI Responses</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statHuman">0</div>
+                        <div class="stat-label">Human Follow-ups</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statResolved">0</div>
+                        <div class="stat-label">Resolved</div>
+                    </div>
+                </div>
+                <div class="preview-user-select">
+                    <select id="previewUserFilter">
+                        <option value="">All Users</option>
+                    </select>
+                </div>
+                <div class="preview-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="human">With Human</button>
+                    <button class="filter-btn" data-filter="pending">Pending</button>
+                </div>
+                <div id="previewFeedbackList"></div>
+            </div>
+            <div class="preview-footer">
+                <span id="lastUpdated">Last updated: --</span>
+                <button class="refresh-btn" id="refreshPreview">Refresh</button>
+            </div>
+        </div>
 
         <div id="settingsModal" class="modal hidden">
             <div class="modal-content">

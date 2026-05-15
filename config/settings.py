@@ -19,6 +19,7 @@ class Settings:
     OLLAMA_EMBEDDING_MODEL: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
 
     CHROMA_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
 
     OPENAI_LLM_MODEL: str = "gpt-4o-mini"
     GOOGLE_LLM_MODEL: str = "gemini-2.0-flash"
